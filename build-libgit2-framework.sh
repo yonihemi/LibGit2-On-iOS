@@ -167,7 +167,7 @@ function build_libgit2() {
 
     rm -rf libgit2-1.3.0
     test -f v1.3.0.zip || wget -q https://github.com/libgit2/libgit2/archive/refs/tags/v1.3.0.zip
-    unzip v1.3.0.zip >/dev/null
+    safe_unzip v1.3.0.zip
     cd libgit2-1.3.0
 
     rm -rf build && mkdir build && cd build
@@ -212,6 +212,10 @@ function copy_modulemap() {
         echo $d
         cp Clibgit2_modulemap $d/Headers/module.modulemap
     done
+}
+
+function safe_unzip() {
+	ditto -V -x -k --sequesterRsrc --rsrc $1 . >/dev/null
 }
 
 ### Build libgit2 and Clibgit2 frameworks for all available platforms
