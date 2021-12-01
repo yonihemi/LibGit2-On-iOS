@@ -240,3 +240,4 @@ zip -r libgit2.xcframework.zip libgit2.xcframework/
 mv libgit2.xcframework Clibgit2.xcframework
 copy_modulemap
 zip -r Clibgit2.xcframework.zip Clibgit2.xcframework/
+swift package compute-checksum Clibgit2.xcframework.zip

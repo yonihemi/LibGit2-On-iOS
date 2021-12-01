@@ -1,0 +1,1 @@
+// Dummy to enable `swift package compute-checksum`
