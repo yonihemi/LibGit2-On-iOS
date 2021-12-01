@@ -1,3 +1,7 @@
+#!/bin/bash
+
+set -x
+
 export REPO_ROOT=`pwd`
 export PATH=$PATH:$REPO_ROOT/tools/bin
 
@@ -11,7 +15,7 @@ export PATH=$PATH:$REPO_ROOT/tools/bin
 # needs multiple xcframeworks for x86_64-based and ARM-based Mac development computer.
 
 # maccatalyst-arm64 macosx macosx-arm64
-AVAILABLE_PLATFORMS=(iphoneos iphonesimulator maccatalyst)
+AVAILABLE_PLATFORMS=(iphoneos iphonesimulator-x86_64 iphonesimulator-arm64)
 
 # Download build tools
 test -d tools || wget -q https://github.com/light-tech/LLVM-On-iOS/releases/download/llvm12.0.0/tools.tar.xz
@@ -48,8 +52,13 @@ function setup_variables() {
 			CMAKE_ARGS+=(-DCMAKE_OSX_ARCHITECTURES=$ARCH \
 				-DCMAKE_OSX_SYSROOT=$SYSROOT);;
 
-		"iphonesimulator")
+		"iphonesimulator-x86_64")
 			ARCH=x86_64
+			SYSROOT=`xcodebuild -version -sdk iphonesimulator Path`
+			CMAKE_ARGS+=(-DCMAKE_OSX_ARCHITECTURES=$ARCH -DCMAKE_OSX_SYSROOT=$SYSROOT);;
+
+		"iphonesimulator-arm64")
+			ARCH=arm64
 			SYSROOT=`xcodebuild -version -sdk iphonesimulator Path`
 			CMAKE_ARGS+=(-DCMAKE_OSX_ARCHITECTURES=$ARCH -DCMAKE_OSX_SYSROOT=$SYSROOT);;
 
@@ -73,7 +82,7 @@ function setup_variables() {
 			CMAKE_ARGS+=(-DCMAKE_OSX_ARCHITECTURES=$ARCH);;
 
 		*)
-			echo "Unsupported or missing platform! Must be one of" ${AVAILABLE_PLATFORMS[@]}
+			echo "Unsupported or missing platform ('$PLATFORM')! Must be one of" ${AVAILABLE_PLATFORMS[@]}
 			exit 1;;
 	esac
 }
@@ -112,9 +121,13 @@ function build_openssl() {
 			TARGET_OS=ios64-cross
 			export CFLAGS="-isysroot $SYSROOT -arch $ARCH";;
 
-		"iphonesimulator")
+		"iphonesimulator-x86_64")
 			TARGET_OS=iossimulator-xcrun
-			export CFLAGS="-isysroot $SYSROOT";;
+			export CFLAGS="-isysroot $SYSROOT -arch $ARCH";;
+
+		"iphonesimulator-arm64")
+			TARGET_OS=iossimulator-xcrun
+			export CFLAGS="-isysroot $SYSROOT -arch $ARCH";;
 
 		"maccatalyst"|"maccatalyst-arm64")
 			TARGET_OS=darwin64-$ARCH-cc
@@ -190,18 +203,17 @@ function build_libgit2() {
 ### Create xcframework for a given library
 function build_xcframework() {
 	local FWNAME=$1
-	shift
-	local PLATFORMS=( "$@" )
-	local FRAMEWORKS_ARGS=()
-
-	echo "Building" $FWNAME "XCFramework containing" ${PLATFORMS[@]}
-
-	for p in ${PLATFORMS[@]}; do
-		FRAMEWORKS_ARGS+=("-library" "install/$p/$FWNAME.a" "-headers" "install/$p/include")
-	done
 
 	cd $REPO_ROOT
-	xcodebuild -create-xcframework ${FRAMEWORKS_ARGS[@]} -output $FWNAME.xcframework
+	lipo -create \
+        install/iphonesimulator-x86_64/libgit2.a \
+        install/iphonesimulator-arm64/libgit2.a \
+        -output install/libgit2-ios-arm64_x86_64-simulator.a
+
+    xcodebuild -create-xcframework \
+        -library install/iphoneos/libgit2.a -headers install/iphoneos/include \
+        -library install/libgit2-ios-arm64_x86_64-simulator.a -headers install/iphonesimulator-arm64/include \
+        -output $FWNAME.xcframework
 }
 
 ### Copy SwiftGit2's module.modulemap to libgit2.xcframework/*/Headers
