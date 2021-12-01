@@ -21,3 +21,13 @@ libgit2/
 Clibgit2/
 SampleApp/
 Temp/
+
+Clibgit2.xcframework/
+install/
+libgit2-1.3.0/
+libssh2-1.10.0/
+openssl-3.0.0/
+tools/
+tools.tar.xz
+*.zip
+*.gz
